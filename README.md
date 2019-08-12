@@ -1,3 +1,12 @@
+# Usage
+
+```
+$ cd wasmtime-runtime && make && cd ..
+$ cargo build --release
+$ cp wasmtime-runtime/libget.so target/release/deps/
+$ cargo test --release
+```
+
 # Wasmtime: a WebAssembly Runtime.
 
 Wasmtime is a standalone wasm-only runtime for [WebAssembly], using the [Cranelift] JIT.

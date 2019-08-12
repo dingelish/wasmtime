@@ -612,6 +612,7 @@ syscalls! {
         iovs_len: wasm32::size_t,
         nwritten: wasm32::uintptr_t,
     ) -> wasm32::__wasi_errno_t {
+        println!("calling fd_write");
         trace!(
             "fd_write(fd={:?}, iovs={:#x?}, iovs_len={:?}, nwritten={:#x?})",
             fd,
@@ -629,6 +630,7 @@ syscalls! {
             Ok(memory) => memory,
             Err(e) => return return_encoded_errno(e),
         };
+        println!("in syscall get memory and returned memory with");
 
         hostcalls::fd_write(wasi_ctx, memory, fd, iovs, iovs_len, nwritten)
     }

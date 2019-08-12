@@ -749,6 +749,7 @@ syscalls! {
         iovs_len: wasm32::size_t,
         nwritten: wasm32::uintptr_t,
     ) -> wasm32::__wasi_errno_t {
+        println!("calling fd_write");
         trace!(
             "fd_write(fd={:?}, iovs={:#x?}, iovs_len={:?}, nwritten={:#x?})",
             fd,
@@ -760,10 +761,12 @@ syscalls! {
         let vmctx = &mut *vmctx;
         let curfds = get_curfds(vmctx);
         let fd = decode_fd(fd);
+        println!("iovs is {}, iovs_len is {}",iovs,iovs_len);
         let iovs = match decode_ciovec_slice(vmctx, iovs, iovs_len) {
             Ok(iovs) => iovs,
             Err(e) => return return_encoded_errno(e),
         };
+        println!("iovs is {:#?}, iovs_len is {}",iovs,iovs_len);
         let mut host_nwritten = 0;
         if let Err(e) = decode_usize_byref(vmctx, nwritten) {
             return return_encoded_errno(e);

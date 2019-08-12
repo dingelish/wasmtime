@@ -25,7 +25,7 @@ pub fn instantiate_wasi(
     let mut finished_functions: PrimaryMap<DefinedFuncIndex, *const VMFunctionBody> =
         PrimaryMap::new();
     let call_conv = isa::CallConv::triple_default(&HOST);
-
+    println!("called instantiate_wasi");
     macro_rules! signature {
         ($name:ident) => {{
             let sig = module.signatures.push(translate_signature(

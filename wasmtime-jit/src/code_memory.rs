@@ -90,12 +90,14 @@ impl CodeMemory {
         self.position = 0;
 
         for m in &mut self.mmaps[self.published..] {
+            /*
             if m.len() != 0 {
                 unsafe {
                     region::protect(m.as_mut_ptr(), m.len(), region::Protection::ReadExecute)
                 }
                 .expect("unable to make memory readonly and executable");
             }
+            */
         }
         self.published = self.mmaps.len();
     }

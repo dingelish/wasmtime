@@ -115,7 +115,9 @@ fn main() {
         .register_spectest()
         .expect("error instantiating \"spectest\"");
 
+
     for filename in &args.arg_file {
+        println!("going to run file of path file {:#?}",filename);
         wast_context
             .run_file(Path::new(&filename))
             .unwrap_or_else(|e| {

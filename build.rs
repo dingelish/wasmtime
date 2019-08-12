@@ -9,6 +9,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 fn main() {
+    println!("cargo:rustc-link-search=native=./wasmtime-runtime");
     let out_dir =
         PathBuf::from(env::var("OUT_DIR").expect("The OUT_DIR environment variable must be set"));
     let mut out = File::create(out_dir.join("wast_testsuite_tests.rs"))

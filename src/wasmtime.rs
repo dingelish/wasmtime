@@ -252,6 +252,7 @@ fn main() {
     let wasi = if args.flag_wasi_c {
         #[cfg(feature = "wasi-c")]
         {
+            println!("calling instantiate_wasi_c");
             instantiate_wasi_c("", global_exports, &preopen_dirs, &argv, &environ)
         }
         #[cfg(not(feature = "wasi-c"))]
@@ -259,6 +260,7 @@ fn main() {
             panic!("wasi-c feature not enabled at build time")
         }
     } else {
+        println!("calling instantiate_wasi");
         instantiate_wasi("", global_exports, &preopen_dirs, &argv, &environ)
     }
     .expect("instantiating wasi");
@@ -283,6 +285,7 @@ fn main() {
 
     // Load the main wasm module.
     let path = Path::new(&args.arg_file);
+    println!("the module context from the file {:#?}",path);
     match handle_module(&mut context, &args, path) {
         Ok(()) => {}
         Err(message) => {
@@ -296,14 +299,15 @@ fn main() {
 fn handle_module(context: &mut Context, args: &Args, path: &Path) -> Result<(), String> {
     // Read the wasm module binary.
     let data = read_wasm(path.to_path_buf())?;
-
     // Compile and instantiating a wasm module.
+    println!("read_wasm end and data is {:#?}",data);
     let mut instance = context
         .instantiate_module(None, &data)
         .map_err(|e| e.to_string())?;
 
     // If a function to invoke was given, invoke it.
     if let Some(ref f) = args.flag_invoke {
+        println!("going to invoke function");
         match context
             .invoke(&mut instance, f, &[])
             .map_err(|e| e.to_string())?

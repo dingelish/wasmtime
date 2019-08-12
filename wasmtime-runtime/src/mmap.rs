@@ -9,6 +9,12 @@ use region;
 use std::string::{String, ToString};
 use std::vec::Vec;
 
+#[link(name="get")]
+extern {
+    fn get_address_start() -> *mut u8;
+    fn get_address_end() -> *mut u8;
+    fn allocate_from_jit(size: usize) -> *mut u8;
+}
 /// Round `size` up to the nearest multiple of `page_size`.
 fn round_up_to_page_size(size: usize, page_size: usize) -> usize {
     (size + (page_size - 1)) & !(page_size - 1)
@@ -62,16 +68,21 @@ impl Mmap {
 
         Ok(if accessible_size == mapping_size {
             // Allocate a single read-write region at once.
+            let addr = unsafe {get_address_start()};
+            println!("calling mmap and accessible size is {} and mapping size is {}",accessible_size,mapping_size);
+            let ptr = unsafe { allocate_from_jit(mapping_size) };
+           /*
             let ptr = unsafe {
                 libc::mmap(
                     ptr::null_mut(),
                     mapping_size,
-                    libc::PROT_READ | libc::PROT_WRITE,
+                    libc::PROT_READ | libc::PROT_WRITE | libc::PROT_EXEC,
                     libc::MAP_PRIVATE | libc::MAP_ANON,
                     -1,
                     0,
                 )
             };
+            */
             if ptr as isize == -1_isize {
                 return Err(errno::errno().to_string());
             }
@@ -242,10 +253,11 @@ impl Mmap {
 impl Drop for Mmap {
     #[cfg(not(target_os = "windows"))]
     fn drop(&mut self) {
-        if self.len != 0 {
-            let r = unsafe { libc::munmap(self.ptr as *mut libc::c_void, self.len) };
-            assert_eq!(r, 0, "munmap failed: {}", errno::errno());
-        }
+        //TODO drop
+        //if self.len != 0 {
+        //    let r = unsafe { libc::munmap(self.ptr as *mut libc::c_void, self.len) };
+        //    assert_eq!(r, 0, "munmap failed: {}", errno::errno());
+        //}
     }
 
     #[cfg(target_os = "windows")]
