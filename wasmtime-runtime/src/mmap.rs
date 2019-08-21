@@ -14,6 +14,7 @@ extern {
     fn get_address_start() -> *mut u8;
     fn get_address_end() -> *mut u8;
     fn allocate_from_jit(size: usize) -> *mut u8;
+    fn free_jit_memory();
 }
 /// Round `size` up to the nearest multiple of `page_size`.
 fn round_up_to_page_size(size: usize, page_size: usize) -> usize {
@@ -41,10 +42,10 @@ impl Mmap {
     }
 
     /// Create a new `Mmap` pointing to at least `size` bytes of page-aligned accessible memory.
-    pub fn with_at_least(size: usize) -> Result<Self, String> {
+    pub fn with_at_least(size: usize, iscode: bool) -> Result<Self, String> {
         let page_size = region::page::size();
         let rounded_size = round_up_to_page_size(size, page_size);
-        Self::accessible_reserved(rounded_size, rounded_size)
+        Self::accessible_reserved(rounded_size, rounded_size, iscode)
     }
 
     /// Create a new `Mmap` pointing to `accessible_size` bytes of page-aligned accessible memory,
@@ -54,6 +55,7 @@ impl Mmap {
     pub fn accessible_reserved(
         accessible_size: usize,
         mapping_size: usize,
+        iscode: bool,
     ) -> Result<Self, String> {
         let page_size = region::page::size();
         assert!(accessible_size <= mapping_size);
@@ -66,13 +68,12 @@ impl Mmap {
             return Ok(Self::new());
         }
 
+        if iscode {
         Ok(if accessible_size == mapping_size {
+            //println!("codememory: calling mmap and equal accessible size is {} and mapping size is {}",accessible_size,mapping_size);
             // Allocate a single read-write region at once.
-            let addr = unsafe {get_address_start()};
-            println!("calling mmap and accessible size is {} and mapping size is {}",accessible_size,mapping_size);
-            let ptr = unsafe { allocate_from_jit(mapping_size) };
-           /*
-            let ptr = unsafe {
+        /*
+            let ptr1 = unsafe {
                 libc::mmap(
                     ptr::null_mut(),
                     mapping_size,
@@ -82,7 +83,12 @@ impl Mmap {
                     0,
                 )
             };
-            */
+         */
+            let ptr = unsafe { allocate_from_jit(mapping_size) };
+            let start = unsafe{get_address_start()};
+            let end = unsafe{get_address_end()};
+           // println!("mmap allocation for code and ptr is {:#?} and ptr1 is {:#?} and size is {} and range is {:#?} to {:#?}",ptr,ptr1,mapping_size,start,end);
+           // println!("mmap allocation for code and ptr is {:#?} and size is {} and range is {:#?} to {:#?}",ptr,mapping_size,start,end);
             if ptr as isize == -1_isize {
                 return Err(errno::errno().to_string());
             }
@@ -93,6 +99,7 @@ impl Mmap {
             }
         } else {
             // Reserve the mapping size.
+            //println!("codememory: calling mmap and not equal accessible size is {} and mapping size is {}",accessible_size,mapping_size);
             let ptr = unsafe {
                 libc::mmap(
                     ptr::null_mut(),
@@ -103,6 +110,13 @@ impl Mmap {
                     0,
                 )
             };
+            panic!("aaa");
+            let start = unsafe{get_address_start()};
+            let end = unsafe{get_address_end()};
+            println!("mmap allocation and ptr is {:#?} and range is {:#?} to {:#?}",ptr,start,end);
+            if !(ptr as usize + mapping_size < start as usize || ptr as usize > end as usize) {
+                panic!("warning!! overlapped");
+            }
             if ptr as isize == -1_isize {
                 return Err(errno::errno().to_string());
             }
@@ -119,6 +133,74 @@ impl Mmap {
 
             result
         })
+        } else {
+
+        Ok(if accessible_size == mapping_size {
+            // Allocate a single read-write region at once.
+      //      println!("other memory: calling mmap and equal accessible size is {} and mapping size is {}",accessible_size,mapping_size);
+            let ptr = unsafe {
+                libc::mmap(
+                    ptr::null_mut(),
+                    mapping_size,
+                    libc::PROT_READ | libc::PROT_WRITE | libc::PROT_EXEC,
+                    libc::MAP_PRIVATE | libc::MAP_ANON,
+                    -1,
+                    0,
+                )
+            };
+            let start = unsafe{get_address_start()};
+            let end = unsafe{get_address_end()};
+
+            println!("mmap allocation and ptr is {:#?} and range is {:#?} to {:#?}",ptr,start,end);
+            if !(ptr as usize + mapping_size < start as usize || ptr as usize > end as usize) {
+                panic!("warning!! overlapped");
+            }
+            if ptr as isize == -1_isize {
+                return Err(errno::errno().to_string());
+            }
+
+            Self {
+                ptr: ptr as *mut u8,
+                len: mapping_size,
+            }
+        } else {
+            // Reserve the mapping size.
+       //     println!("other memory: calling mmap and not equal accessible size is {} and mapping size is {}",accessible_size,mapping_size);
+            let ptr = unsafe {
+                libc::mmap(
+                    ptr::null_mut(),
+                    mapping_size,
+                    libc::PROT_NONE,
+                    libc::MAP_PRIVATE | libc::MAP_ANON,
+                    -1,
+                    0,
+                )
+            };
+
+            let start = unsafe{get_address_start()};
+            let end = unsafe{get_address_end()};
+            //println!("mmap allocation and ptr is {:#?} and range is {:#?} to {:#?}",ptr,start,end);
+            if !(ptr as usize + mapping_size < start as usize || ptr as usize > end as usize) {
+                panic!("warning!! overlapped");
+            }
+
+            if ptr as isize == -1_isize {
+                return Err(errno::errno().to_string());
+            }
+
+            let mut result = Self {
+                ptr: ptr as *mut u8,
+                len: mapping_size,
+            };
+
+            if accessible_size != 0 {
+                // Commit the accessible size.
+                result.make_accessible(0, accessible_size)?;
+            }
+
+            result
+        })
+        }
     }
 
     /// Create a new `Mmap` pointing to `accessible_size` bytes of page-aligned accessible memory,
@@ -253,11 +335,14 @@ impl Mmap {
 impl Drop for Mmap {
     #[cfg(not(target_os = "windows"))]
     fn drop(&mut self) {
+        //println!("freeing memory here!!");
         //TODO drop
         //if self.len != 0 {
         //    let r = unsafe { libc::munmap(self.ptr as *mut libc::c_void, self.len) };
         //    assert_eq!(r, 0, "munmap failed: {}", errno::errno());
         //}
+        //unsafe{free_jit_memory()};
+        //self.ptr = 0 as *mut u8;
     }
 
     #[cfg(target_os = "windows")]

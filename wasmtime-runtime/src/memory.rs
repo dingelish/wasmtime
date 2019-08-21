@@ -59,7 +59,7 @@ impl LinearMemory {
         let mapped_pages = plan.memory.minimum as usize;
         let mapped_bytes = mapped_pages * WASM_PAGE_SIZE as usize;
 
-        let mmap = Mmap::accessible_reserved(mapped_bytes, request_bytes)?;
+        let mmap = Mmap::accessible_reserved(mapped_bytes, request_bytes, false)?;
 
         Ok(Self {
             mmap,
@@ -112,7 +112,7 @@ impl LinearMemory {
             let guard_bytes = self.offset_guard_size;
             let request_bytes = new_bytes.checked_add(guard_bytes)?;
 
-            let mut new_mmap = Mmap::accessible_reserved(new_bytes, request_bytes).ok()?;
+            let mut new_mmap = Mmap::accessible_reserved(new_bytes, request_bytes, false).ok()?;
 
             let copy_len = self.mmap.len() - self.offset_guard_size;
             new_mmap.as_mut_slice()[..copy_len].copy_from_slice(&self.mmap.as_slice()[..copy_len]);

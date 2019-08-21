@@ -664,7 +664,7 @@ impl InstanceHandle {
         let mut instance_mmap = Mmap::with_at_least(
             mem::size_of::<Instance>()
                 .checked_add(usize::try_from(offsets.size_of_vmctx()).unwrap())
-                .unwrap(),
+                .unwrap(), false
         )
         .map_err(InstantiationError::Resource)?;
 

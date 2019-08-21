@@ -8,13 +8,13 @@ PHDRS
   interp PT_INTERP FLAGS(4);
   text PT_LOAD FILEHDR PHDRS FLAGS(5);
   data PT_LOAD FLAGS(6);
-  jit PT_LOAD FLAGS(7);
   dynamic PT_DYNAMIC FLAGS(6);
   note PT_NOTE FLAGS(4);
   tls PT_TLS FLAGS(4);
   gnu_eh_frame PT_GNU_EH_FRAME FLAGS(4);
   gnu_stack PT_GNU_STACK FLAGS(7);
   gnu_relro 0x6474e552 FLAGS(4);
+  jit PT_LOAD FLAGS(7);
 }
 SECTIONS
 {
@@ -180,7 +180,7 @@ SECTIONS
   . = DATA_SEGMENT_END (.);
   . = . + ALIGN (CONSTANT (MAXPAGESIZE));
   .jit : {
-    PROVIDE (__jit_size = 128 * 256 * CONSTANT (COMMONPAGESIZE));
+    PROVIDE (__jit_size =  128 * 256 * CONSTANT (COMMONPAGESIZE));
     PROVIDE (__jit_start = .);
     . = . + __jit_size;
     PROVIDE (__jit_end = .);

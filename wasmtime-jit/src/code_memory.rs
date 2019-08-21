@@ -34,14 +34,16 @@ impl CodeMemory {
     /// TODO: Add an alignment flag.
     fn allocate(&mut self, size: usize) -> Result<&mut [u8], String> {
         if self.current.len() - self.position < size {
+            //println!("reset position to be 0 because current position is {}, len is {} and size is {}",self.position,self.current.len(),size);
             self.mmaps.push(mem::replace(
                 &mut self.current,
-                Mmap::with_at_least(cmp::max(0x10000, size))?,
+                Mmap::with_at_least(cmp::max(0x10000, size), true)?,
             ));
             self.position = 0;
         }
         let old_position = self.position;
         self.position += size;
+        println!("return from allocate and old position is {} and new position is {}, current_len is {}, asking size is {}",old_position,self.position,self.current.len(),size);
         Ok(&mut self.current.as_mut_slice()[old_position..self.position])
     }
 
@@ -90,7 +92,7 @@ impl CodeMemory {
         self.position = 0;
 
         for m in &mut self.mmaps[self.published..] {
-            /*
+           /*
             if m.len() != 0 {
                 unsafe {
                     region::protect(m.as_mut_ptr(), m.len(), region::Protection::ReadExecute)

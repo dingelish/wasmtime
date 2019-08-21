@@ -55,6 +55,15 @@ use wasmtime_wast::instantiate_spectest;
 use wasmtime_wasi_c::instantiate_wasi_c;
 
 mod utils;
+#[link(name="get")]
+extern {
+    fn get_address_start() -> *mut u8;
+    fn get_address_end() -> *mut u8;
+    fn allocate_from_jit(size: usize) -> *mut u8;
+    fn free_jit_memory();
+    fn init();
+}
+
 
 static LOG_FILENAME_PREFIX: &str = "wasmtime.dbg.";
 
@@ -195,6 +204,7 @@ fn compute_environ(flag_env: &[String]) -> Vec<(String, String)> {
 }
 
 fn main() {
+    unsafe{init()};
     let version = env!("CARGO_PKG_VERSION");
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| {
